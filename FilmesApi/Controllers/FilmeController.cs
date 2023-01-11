@@ -1,7 +1,6 @@
 ﻿using FilmesApi.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace FilmesApi.Controllers
 {
@@ -10,29 +9,85 @@ namespace FilmesApi.Controllers
     [Route("[controller]")]
     public class FilmeController : ControllerBase
     {
-        private static List<Filme> filmes = new List<Filme>();
         private readonly IConfiguration _configuration;
-        private static int id = 0;
 
-        [HttpGet]
+        public FilmeController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        [HttpGet("MostrarFilmes")]
         public IEnumerable<Filme> MostrarFilmes([FromQuery] int skip, [FromQuery] int take = 50)
         {
-            return filmes.Skip(skip).Take(take);
-        }
-
-        [HttpGet("{id}")]
-        public IActionResult MostrarFilme(int id)
-        {
-            var filme = filmes.FirstOrDefault(filme => filme.Id == id);
-            if (filme == null) return NotFound();
-            return Ok(filme);
-        }
-
-        [HttpPost]
-        public Filme AdicionaFilme([FromBody] Filme filme)
-        {
+            List<Filme> filmes = new List<Filme>();
             string connect = _configuration.GetConnectionString("DefaultConnection").ToString();
 
+            using (SqlConnection con = new SqlConnection(connect))
+            {
+                con.Open();
+                string query = "SELECT * FROM Filme";
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    var reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        var filme = new Filme()
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Titulo = reader["Titulo"].ToString(),
+                            Genero = reader["Genero"].ToString(),
+                            Duracao = Convert.ToInt32(reader["Duracao"])
+                        };
+
+                        filmes.Add(filme);
+                    }
+                }
+                con.Close();
+                return filmes;
+            }
+        }
+
+        [HttpGet("MostrarFilme")]
+        public List<Filme> MostrarFilme([FromQuery] int id)
+        {
+            List<Filme> filmes = new List<Filme>();
+            string connect = _configuration.GetConnectionString("DefaultConnection").ToString();
+
+            using (SqlConnection con = new SqlConnection(connect))
+            {
+                con.Open();
+                string query = "SELECT * FROM Filme where id = @id";
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    cmd.Parameters.AddWithValue("@id", id);
+                    var reader = cmd.ExecuteReader();
+
+                    while (reader.Read())
+                    {
+                        var filme = new Filme()
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            Titulo = reader["Titulo"].ToString(),
+                            Genero = reader["Genero"].ToString(),
+                            Duracao = Convert.ToInt32(reader["Duracao"])
+                        };
+
+                        filmes.Add(filme);
+                    }
+                }
+                con.Close();
+                return filmes;
+            }
+
+        }
+
+        [HttpPost("AdicionarFilme")]
+        public Filme AdicionarFilme([FromBody] Filme filme)
+        {
+            string connect = _configuration.GetConnectionString("DefaultConnection").ToString();
 
             using (SqlConnection con = new SqlConnection(connect))
             {
@@ -49,9 +104,26 @@ namespace FilmesApi.Controllers
                     con.Close();
                 }
             };
-
-            //filmes.Add(filme);
             return filme;
+        }
+
+        [HttpDelete("ExcluirFilme")]
+        public void ExcluirFilme ([FromQuery] int id)
+        {
+            string connect = _configuration.GetConnectionString("DefaultConnection").ToString();
+
+            using (SqlConnection con = new SqlConnection(connect))
+            {
+                con.Open();
+                string query = "DELETE FROM Filme WHERE id = @id";
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    cmd.Parameters.AddWithValue("@id", id);
+                    var reader = cmd.ExecuteReader();
+                }
+                con.Close();
+            }
         }
     }
 }
