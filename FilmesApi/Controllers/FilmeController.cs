@@ -107,6 +107,27 @@ namespace FilmesApi.Controllers
             return filme;
         }
 
+        [HttpPut("EditarFilme")]
+        public void EditarFilme([FromQuery] int id, [FromBody] Filme filme)
+        {
+            string connect = _configuration.GetConnectionString("DefaultConnection").ToString();
+
+            using (SqlConnection con = new SqlConnection(connect))
+            {
+                con.Open();
+                string query = "UPDATE Filme SET titulo = @Titulo, genero = @Genero, duracao = @Duracao WHERE id = " + id;
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    cmd.Parameters.AddWithValue("@Titulo", filme.Titulo.ToString());
+                    cmd.Parameters.AddWithValue("@Genero", filme.Genero.ToString());
+                    cmd.Parameters.AddWithValue("@Duracao", int.Parse(filme.Duracao.ToString()));
+                    cmd.ExecuteNonQuery();
+                }
+                con.Close();
+            }
+        }
+
         [HttpDelete("ExcluirFilme")]
         public void ExcluirFilme ([FromQuery] int id)
         {
